@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomodoro Timer | 25:00</title>
+  <style>
+/* ==========================================================================
+   FocusFlow Pomodoro Timer Stylesheet
+   ========================================================================== */
+
+:root {
+  /* Dynamic Mode Colors (defaults to Pomodoro) */
+  --theme-accent: #f43f5e;
+  --theme-accent-hover: #e11d48;
+  --theme-accent-rgb: 244, 63, 94;
+  --theme-gradient: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+  --theme-glow: rgba(244, 63, 94, 0.28);
+
+  /* Surface & Base Colors */
+  --bg-main: #0b0f19;
+  --bg-card: rgba(18, 24, 39, 0.78);
+  --bg-card-hover: rgba(24, 32, 53, 0.85);
+  --bg-glass: rgba(255, 255, 255, 0.035);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(255, 255, 255, 0.18);
+
+  /* Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Sizing & Radius */
+  --radius-card: 28px;
+  --radius-btn: 14px;
+  --radius-pill: 9999px;
+
+  /* Circular Meter */
+  --circumference: 879.6459;
+}
+
+/* Mode-specific Overrides */
+body.mode-pomodoro {
+  --theme-accent: #f43f5e;
+  --theme-accent-hover: #e11d48;
+  --theme-accent-rgb: 244, 63, 94;
+  --theme-gradient: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
+  --theme-glow: rgba(244, 63, 94, 0.28);
+}
+
+body.mode-shortBreak {
+  --theme-accent: #10b981;
+  --theme-accent-hover: #059669;
+  --theme-accent-rgb: 16, 185, 129;
+  --theme-gradient: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  --theme-glow: rgba(16, 185, 129, 0.28);
+}
+
+body.mode-longBreak {
+  --theme-accent: #06b6d4;
+  --theme-accent-hover: #0891b2;
+  --theme-accent-rgb: 6, 182, 212;
+  --theme-gradient: linear-gradient(135deg, #06b6d4 0%, #38bdf8 100%);
+  --theme-glow: rgba(6, 182, 212, 0.28);
+}
+
+/* Global Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  overflow-x: hidden;
+  position: relative;
+  transition: background-color 0.4s ease;
+}
+
+/* Ambient Glow Backdrop */
+.glow-backdrop {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--theme-glow) 0%, rgba(11, 15, 25, 0) 70%);
+  filter: blur(50px);
+  pointer-events: none;
+  z-index: 0;
+  transition: background 0.6s ease;
+}
+
+/* App Main Container */
+.app-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: var(--radius-card);
+  padding: 2rem 1.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6),
+              0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 800;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.logo-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--theme-accent);
+  transition: color 0.4s ease;
+}
+
+.icon-button {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+  transform: translateY(-1px);
+}
+
+.icon-button.mini {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.icon-button.mini svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Mode Switcher Tabs */
+.mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 5px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  gap: 4px;
+}
+
+.mode-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.65rem 0.5rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.mode-tab:hover:not(.active) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-tab.active {
+  background: var(--theme-accent);
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--theme-glow);
+}
+
+/* Circular Timer Section */
+.timer-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.circular-progress-wrapper {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+.ring-progress {
+  fill: none;
+  stroke: var(--theme-accent);
+  stroke-dasharray: var(--circumference);
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.4s linear, stroke 0.4s ease;
+  filter: drop-shadow(0 0 8px var(--theme-accent));
+}
+
+/* Inner Display Overlay */
+.timer-display-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.mode-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--theme-accent);
+  background: rgba(var(--theme-accent-rgb), 0.12);
+  padding: 0.25rem 0.85rem;
+  border-radius: var(--radius-pill);
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.time-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.timer-subtext {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 0.6rem;
+  transition: color 0.3s ease;
+}
+
+/* Primary Controls */
+.controls-section {
+  display: flex;
+  justify-content: center;
+}
+
+.button-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  flex: 2;
+  padding: 1.05rem 1.75rem;
+  background: var(--theme-gradient);
+  color: #ffffff;
+  font-size: 1.15rem;
+  box-shadow: 0 8px 24px var(--theme-glow),
+              inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px var(--theme-glow);
+}
+
+.btn-primary svg {
+  width: 20px;
+  height: 20px;
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: 1.05rem 1.1rem;
+  background: var(--bg-glass);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+  transform: translateY(-2px);
+}
+
+.btn-secondary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-outline-sm {
+  padding: 0.45rem 0.8rem;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  border-radius: 10px;
+}
+
+.btn-outline-sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-outline-sm:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-active);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.8rem;
+}
+
+.btn-text:hover {
+  color: var(--text-primary);
+}
+
+/* Sound Bar Controls */
+.sound-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+}
+
+@media (min-width: 420px) {
+  .sound-bar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.sound-control-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.volume-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 75px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: var(--theme-accent);
+}
+
+.volume-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  width: 32px;
+}
+
+.sound-select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+  outline: none;
+  cursor: pointer;
+  max-width: 140px;
+}
+
+.sound-select option {
+  background: #111827;
+  color: #f8fafc;
+}
+
+/* Footer & Cycle Session Tracker */
+.app-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.25rem;
+}
+
+.session-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cycle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cycle-label strong {
+  color: var(--text-primary);
+}
+
+.cycle-count-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.session-dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid var(--border-color);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dot.completed {
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 10px var(--theme-glow);
+  transform: scale(1.1);
+}
+
+.keyboard-hints {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  padding: 0.1rem 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* Modal Dialog */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+}
+
+.modal-backdrop.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-card {
+  background: #131b2e;
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 420px;
+  padding: 1.75rem;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+  transform: translateY(0);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-backdrop.hidden .modal-card {
+  transform: translateY(20px);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.setting-group-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.setting-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.setting-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.setting-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.setting-field input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  padding: 0.5rem 0.6rem;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s ease;
+}
+
+.setting-field input:focus {
+  border-color: var(--theme-accent);
+}
+
+.setting-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.toggle-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--theme-accent);
+  cursor: pointer;
+}
+
+.modal-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+/* Utilities */
+.hidden {
+  display: none !important;
+}
+
+.mt-4 {
+  margin-top: 1rem;
+}
+
+/* Pulse animation on completion */
+@keyframes ringPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 8px var(--theme-accent)); }
+  50% { transform: scale(1.03); filter: drop-shadow(0 0 20px var(--theme-accent)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 8px var(--theme-accent)); }
+}
+
+.timer-completed {
+  animation: ringPulse 1.2s ease-in-out infinite;
+}
+
+</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="mode-pomodoro">
+  <!-- Background Glow Element -->
+  <div class="glow-backdrop" aria-hidden="true"></div>
+
+  <main class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span class="logo-text">FocusFlow</span>
+      </div>
+      <div class="header-actions">
+        <button id="btnSettings" class="icon-button" title="Timer Settings" aria-label="Open settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Mode Selector Tabs -->
+    <nav class="mode-tabs" role="tablist" aria-label="Timer Modes">
+      <button class="mode-tab active" data-mode="pomodoro" role="tab" aria-selected="true" id="tab-pomodoro">
+        Pomodoro
+      </button>
+      <button class="mode-tab" data-mode="shortBreak" role="tab" aria-selected="false" id="tab-shortBreak">
+        Short Break
+      </button>
+      <button class="mode-tab" data-mode="longBreak" role="tab" aria-selected="false" id="tab-longBreak">
+        Long Break
+      </button>
+    </nav>
+
+    <!-- Central Timer Display with Circular Progress -->
+    <section class="timer-section" aria-label="Timer Display">
+      <div class="circular-progress-wrapper">
+        <svg class="progress-ring" width="320" height="320" viewBox="0 0 320 320">
+          <defs>
+            <linearGradient id="pomodoroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f43f5e" />
+              <stop offset="100%" stop-color="#fb7185" />
+            </linearGradient>
+            <linearGradient id="shortBreakGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#10b981" />
+              <stop offset="100%" stop-color="#34d399" />
+            </linearGradient>
+            <linearGradient id="longBreakGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#06b6d4" />
+              <stop offset="100%" stop-color="#38bdf8" />
+            </linearGradient>
+            <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="6" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          
+          <!-- Background Track -->
+          <circle class="ring-bg" cx="160" cy="160" r="140" stroke-width="12"></circle>
+          
+          <!-- Glowing Animated Progress Arc -->
+          <circle class="ring-progress" id="ringProgress" cx="160" cy="160" r="140" stroke-width="12" stroke-linecap="round"></circle>
+        </svg>
+
+        <!-- Inner Content Overlay -->
+        <div class="timer-display-content">
+          <span class="mode-badge" id="modeBadge">Focus Time</span>
+          <div class="time-display" id="timeDisplay" aria-live="polite">25:00</div>
+          <span class="timer-subtext" id="timerStatus">Ready to focus</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Primary Timer Controls -->
+    <section class="controls-section" aria-label="Timer Controls">
+      <div class="button-group">
+        <button id="btnReset" class="btn btn-secondary" title="Reset current timer (Key: R)" aria-label="Reset Timer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+          <span>Reset</span>
+        </button>
+
+        <button id="btnStartPause" class="btn btn-primary" title="Start/Pause timer (Key: Space)" aria-label="Start Timer">
+          <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <svg class="icon-pause hidden" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+            <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+          </svg>
+          <span id="startPauseText">Start</span>
+        </button>
+
+        <button id="btnSkip" class="btn btn-secondary" title="Skip to next session" aria-label="Skip to Next Session">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19"></line>
+          </svg>
+          <span>Skip</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Sound & Audio Notification Quick Bar -->
+    <section class="sound-bar" aria-label="Sound Controls">
+      <div class="sound-control-item">
+        <button id="btnMuteToggle" class="icon-button mini" title="Toggle Mute (Key: M)" aria-label="Toggle mute">
+          <svg class="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg class="icon-sound-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <div class="volume-slider-wrapper">
+          <input type="range" id="volumeSlider" min="0" max="100" value="80" title="Audio volume" aria-label="Notification volume">
+          <span id="volumeValue" class="volume-label">80%</span>
+        </div>
+      </div>
+
+      <div class="sound-control-item">
+        <select id="soundPresetSelect" class="sound-select" title="Notification sound style">
+          <option value="zenChime" selected>Zen Chime (Tibetan Bell)</option>
+          <option value="digitalBell">Digital Arpeggio</option>
+          <option value="marimba">Warm Marimba</option>
+          <option value="classicBeep">Classic Beeps</option>
+        </select>
+
+        <button id="btnTestSound" class="btn btn-outline-sm" title="Preview chime sound" aria-label="Test chime sound">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <span>Test</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Session Progress Dots & Stats -->
+    <footer class="app-footer">
+      <div class="session-progress">
+        <div class="cycle-label">
+          <span>Cycle <strong id="currentCycleNumber">1</strong></span>
+          <span class="cycle-count-text" id="cycleSummary">0 of 4 Completed</span>
+        </div>
+        <div class="session-dots" id="sessionDots" aria-label="Completed Pomodoro Sessions in current cycle">
+          <div class="dot" data-index="1" title="Pomodoro 1"></div>
+          <div class="dot" data-index="2" title="Pomodoro 2"></div>
+          <div class="dot" data-index="3" title="Pomodoro 3"></div>
+          <div class="dot" data-index="4" title="Pomodoro 4"></div>
+        </div>
+      </div>
+
+      <div class="keyboard-hints">
+        <span><kbd>Space</kbd> Start/Pause</span>
+        <span><kbd>R</kbd> Reset</span>
+        <span><kbd>M</kbd> Mute</span>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Settings Modal Dialog -->
+  <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="modalTitle" class="modal-title">Settings</h2>
+        <button id="btnCloseSettings" class="icon-button mini" aria-label="Close settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <h3 class="setting-group-title">Time (Minutes)</h3>
+        <div class="setting-inputs-grid">
+          <div class="setting-field">
+            <label for="inputPomodoro">Pomodoro</label>
+            <input type="number" id="inputPomodoro" min="1" max="90" value="25">
+          </div>
+          <div class="setting-field">
+            <label for="inputShortBreak">Short Break</label>
+            <input type="number" id="inputShortBreak" min="1" max="30" value="5">
+          </div>
+          <div class="setting-field">
+            <label for="inputLongBreak">Long Break</label>
+            <input type="number" id="inputLongBreak" min="1" max="60" value="15">
+          </div>
+        </div>
+
+        <h3 class="setting-group-title mt-4">Automation</h3>
+        <div class="setting-toggle-row">
+          <label for="toggleAutoBreak" class="toggle-label">Auto-start Breaks</label>
+          <input type="checkbox" id="toggleAutoBreak" class="toggle-checkbox">
+        </div>
+        <div class="setting-toggle-row">
+          <label for="toggleAutoPomodoro" class="toggle-label">Auto-start Pomodoros</label>
+          <input type="checkbox" id="toggleAutoPomodoro" class="toggle-checkbox">
+        </div>
+        <div class="setting-toggle-row">
+          <label for="toggleNotifications" class="toggle-label">Browser Notifications</label>
+          <input type="checkbox" id="toggleNotifications" class="toggle-checkbox">
+        </div>
+
+        <!-- Quick Reset to Defaults -->
+        <div class="modal-footer-actions">
+          <button id="btnRestoreDefaults" class="btn btn-text">Reset to Defaults</button>
+          <button id="btnSaveSettings" class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+/**
+ * FocusFlow - Modern Web-based Pomodoro Timer
+ * Features:
+ * - 25-minute countdown display with SVG circular progress
+ * - Start / Pause / Reset / Skip controls
+ * - Synthesized audio notification sound via native Web Audio API
+ * - Sound selector (Zen Chime, Digital Bell, Marimba, Classic Beep)
+ * - Volume slider and mute toggle
+ * - Tab title synchronization & desktop notifications
+ * - Session cycle tracker
+ * - Drift-free timestamp-based timer engine
+ */
+
+(() => {
+  'use strict';
+
+  // --- Configuration & State ---
+  const CIRCUMFERENCE = 2 * Math.PI * 140; // ~879.6459
+
+  const DEFAULT_SETTINGS = {
+    pomodoro: 25,     // minutes
+    shortBreak: 5,    // minutes
+    longBreak: 15,    // minutes
+    autoStartBreaks: false,
+    autoStartPomodoros: false,
+    notifications: false,
+    volume: 0.8,
+    isMuted: false,
+    soundPreset: 'zenChime'
+  };
+
+  let settings = loadSettings();
+
+  const state = {
+    mode: 'pomodoro',        // 'pomodoro' | 'shortBreak' | 'longBreak'
+    status: 'IDLE',          // 'IDLE' | 'RUNNING' | 'PAUSED'
+    timeRemaining: settings.pomodoro * 60,
+    totalDuration: settings.pomodoro * 60,
+    timerId: null,
+    targetEndTime: null,
+    completedPomodoros: 0,
+    cycle: 1
+  };
+
+  // --- Audio Synthesis via Web Audio API ---
+  class SoundSynthesizer {
+    constructor() {
+      this.audioCtx = null;
+    }
+
+    init() {
+      if (!this.audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          this.audioCtx = new AudioContextClass();
+        }
+      }
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+    }
+
+    play(preset = settings.soundPreset, volume = settings.volume) {
+      if (settings.isMuted || volume <= 0) return;
+
+      this.init();
+      if (!this.audioCtx) return;
+
+      const now = this.audioCtx.currentTime;
+      const masterGain = this.audioCtx.createGain();
+      masterGain.gain.setValueAtTime(volume, now);
+      masterGain.connect(this.audioCtx.destination);
+
+      switch (preset) {
+        case 'digitalBell':
+          this.playDigitalBell(now, masterGain);
+          break;
+        case 'marimba':
+          this.playMarimba(now, masterGain);
+          break;
+        case 'classicBeep':
+          this.playClassicBeeps(now, masterGain);
+          break;
+        case 'zenChime':
+        default:
+          this.playZenChime(now, masterGain);
+          break;
+      }
+    }
+
+    /**
+     * Zen Chime: Rich Tibetan Singing Bowl chime with harmonic overtones
+     * Fundamental: 528 Hz (Clarity / Peace)
+     */
+    playZenChime(startTime, outputNode) {
+      const partials = [
+        { freq: 528, gain: 0.7, decay: 3.5 },
+        { freq: 1056, gain: 0.35, decay: 2.8 },
+        { freq: 1584, gain: 0.2, decay: 2.2 },
+        { freq: 2112, gain: 0.1, decay: 1.6 }
+      ];
+
+      partials.forEach(p => {
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(p.freq, startTime);
+
+        // Gentle envelope: quick attack, long exponential decay
+        gain.gain.setValueAtTime(0.0001, startTime);
+        gain.gain.exponentialRampToValueAtTime(p.gain, startTime + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + p.decay);
+
+        osc.connect(gain);
+        gain.connect(outputNode);
+
+        osc.start(startTime);
+        osc.stop(startTime + p.decay + 0.05);
+      });
+    }
+
+    /**
+     * Digital Bell: Clean melodic arpeggio (C6, E6, G6, C7)
+     */
+    playDigitalBell(startTime, outputNode) {
+      const notes = [1046.5, 1318.51, 1567.98, 2093.0]; // C6, E6, G6, C7
+      notes.forEach((freq, idx) => {
+        const noteStart = startTime + idx * 0.11;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, noteStart);
+
+        gain.gain.setValueAtTime(0.0001, noteStart);
+        gain.gain.exponentialRampToValueAtTime(0.4, noteStart + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.7);
+
+        osc.connect(gain);
+        gain.connect(outputNode);
+
+        osc.start(noteStart);
+        osc.stop(noteStart + 0.75);
+      });
+    }
+
+    /**
+     * Marimba: Warm acoustic triplet strike
+     */
+    playMarimba(startTime, outputNode) {
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      notes.forEach((freq, idx) => {
+        const noteStart = startTime + idx * 0.15;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, noteStart);
+
+        gain.gain.setValueAtTime(0.0001, noteStart);
+        gain.gain.exponentialRampToValueAtTime(0.5, noteStart + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.9);
+
+        osc.connect(gain);
+        gain.connect(outputNode);
+
+        osc.start(noteStart);
+        osc.stop(noteStart + 0.95);
+      });
+    }
+
+    /**
+     * Classic Beeps: Three gentle high-pitched electronic alert pulses
+     */
+    playClassicBeeps(startTime, outputNode) {
+      for (let i = 0; i < 3; i++) {
+        const beepStart = startTime + i * 0.22;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, beepStart);
+
+        gain.gain.setValueAtTime(0.0001, beepStart);
+        gain.gain.linearRampToValueAtTime(0.2, beepStart + 0.02);
+        gain.gain.setValueAtTime(0.2, beepStart + 0.12);
+        gain.gain.linearRampToValueAtTime(0.0001, beepStart + 0.14);
+
+        osc.connect(gain);
+        gain.connect(outputNode);
+
+        osc.start(beepStart);
+        osc.stop(beepStart + 0.15);
+      }
+    }
+  }
+
+  const synthesizer = new SoundSynthesizer();
+
+  // --- DOM Elements ---
+  const dom = {
+    body: document.body,
+    timeDisplay: document.getElementById('timeDisplay'),
+    ringProgress: document.getElementById('ringProgress'),
+    modeBadge: document.getElementById('modeBadge'),
+    timerStatus: document.getElementById('timerStatus'),
+    startPauseBtn: document.getElementById('btnStartPause'),
+    startPauseText: document.getElementById('startPauseText'),
+    iconPlay: document.querySelector('.icon-play'),
+    iconPause: document.querySelector('.icon-pause'),
+    resetBtn: document.getElementById('btnReset'),
+    skipBtn: document.getElementById('btnSkip'),
+    modeTabs: document.querySelectorAll('.mode-tab'),
+    volumeSlider: document.getElementById('volumeSlider'),
+    volumeValue: document.getElementById('volumeValue'),
+    muteBtn: document.getElementById('btnMuteToggle'),
+    iconSoundOn: document.querySelector('.icon-sound-on'),
+    iconSoundOff: document.querySelector('.icon-sound-off'),
+    soundPresetSelect: document.getElementById('soundPresetSelect'),
+    btnTestSound: document.getElementById('btnTestSound'),
+    sessionDots: document.querySelectorAll('#sessionDots .dot'),
+    currentCycleNumber: document.getElementById('currentCycleNumber'),
+    cycleSummary: document.getElementById('cycleSummary'),
+    // Settings modal elements
+    settingsBtn: document.getElementById('btnSettings'),
+    closeSettingsBtn: document.getElementById('btnCloseSettings'),
+    settingsModal: document.getElementById('settingsModal'),
+    inputPomodoro: document.getElementById('inputPomodoro'),
+    inputShortBreak: document.getElementById('inputShortBreak'),
+    inputLongBreak: document.getElementById('inputLongBreak'),
+    toggleAutoBreak: document.getElementById('toggleAutoBreak'),
+    toggleAutoPomodoro: document.getElementById('toggleAutoPomodoro'),
+    toggleNotifications: document.getElementById('toggleNotifications'),
+    btnSaveSettings: document.getElementById('btnSaveSettings'),
+    btnRestoreDefaults: document.getElementById('btnRestoreDefaults'),
+    circularWrapper: document.querySelector('.circular-progress-wrapper')
+  };
+
+  // --- Helper Functions ---
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  function getModeTitle(mode) {
+    switch (mode) {
+      case 'pomodoro': return 'Pomodoro';
+      case 'shortBreak': return 'Short Break';
+      case 'longBreak': return 'Long Break';
+      default: return 'Timer';
+    }
+  }
+
+  function loadSettings() {
+    try {
+      const saved = localStorage.getItem('focusflow_settings');
+      return saved ? Object.assign({}, DEFAULT_SETTINGS, JSON.parse(saved)) : Object.assign({}, DEFAULT_SETTINGS);
+    } catch {
+      return Object.assign({}, DEFAULT_SETTINGS);
+    }
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem('focusflow_settings', JSON.stringify(settings));
+    } catch (e) {
+      console.warn('Could not save settings to localStorage:', e);
+    }
+  }
+
+  // --- Core Timer Operations ---
+  function updateDisplay() {
+    // 1. Text display
+    const formatted = formatTime(state.timeRemaining);
+    dom.timeDisplay.textContent = formatted;
+
+    // 2. SVG Circular Progress (smoothly drains as time passes)
+    const progress = state.totalDuration > 0 ? state.timeRemaining / state.totalDuration : 0;
+    const strokeOffset = CIRCUMFERENCE * (1 - progress);
+    dom.ringProgress.style.strokeDashoffset = strokeOffset;
+
+    // 3. Document Title
+    const modeName = getModeTitle(state.mode);
+    if (state.status === 'RUNNING') {
+      document.title = `(${formatted}) ${modeName} - FocusFlow`;
+      dom.timerStatus.textContent = state.mode === 'pomodoro' ? 'Stay focused!' : 'Time to recharge';
+    } else if (state.status === 'PAUSED') {
+      document.title = `[Paused] ${formatted} - FocusFlow`;
+      dom.timerStatus.textContent = 'Timer paused';
+    } else {
+      document.title = `${modeName} | ${formatted} - FocusFlow`;
+      dom.timerStatus.textContent = state.mode === 'pomodoro' ? 'Ready to focus' : 'Ready for a break';
+    }
+  }
+
+  function setMode(newMode, autoStart = false) {
+    state.mode = newMode;
+    dom.body.className = `mode-${newMode}`;
+
+    // Update Tab UI
+    dom.modeTabs.forEach(tab => {
+      const isActive = tab.dataset.mode === newMode;
+      tab.classList.toggle('active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    // Update Badge
+    if (newMode === 'pomodoro') {
+      dom.modeBadge.textContent = 'Focus Time';
+    } else if (newMode === 'shortBreak') {
+      dom.modeBadge.textContent = 'Short Break';
+    } else {
+      dom.modeBadge.textContent = 'Long Break';
+    }
+
+    // Reset durations
+    const durationMinutes = settings[newMode] || 25;
+    state.totalDuration = durationMinutes * 60;
+    state.timeRemaining = state.totalDuration;
+
+    // Stop current timer
+    stopTimer();
+    updateDisplay();
+
+    if (autoStart) {
+      startTimer();
+    }
+  }
+
+  function startTimer() {
+    synthesizer.init();
+
+    if (state.status === 'RUNNING') return;
+
+    dom.circularWrapper.classList.remove('timer-completed');
+    state.status = 'RUNNING';
+    state.targetEndTime = Date.now() + state.timeRemaining * 1000;
+
+    // Update Play/Pause Button
+    dom.iconPlay.classList.add('hidden');
+    dom.iconPause.classList.remove('hidden');
+    dom.startPauseText.textContent = 'Pause';
+    dom.startPauseBtn.setAttribute('aria-label', 'Pause Timer');
+
+    updateDisplay();
+
+    // High frequency interval (200ms) with Date.now() delta avoids background tab throttling drift
+    state.timerId = setInterval(() => {
+      const now = Date.now();
+      const diff = Math.max(0, Math.round((state.targetEndTime - now) / 1000));
+      state.timeRemaining = diff;
+      updateDisplay();
+
+      if (diff <= 0) {
+        completeTimer();
+      }
+    }, 200);
+  }
+
+  function pauseTimer() {
+    if (state.status !== 'RUNNING') return;
+
+    clearInterval(state.timerId);
+    state.timerId = null;
+    state.status = 'PAUSED';
+
+    // Recalculate remaining exact seconds
+    if (state.targetEndTime) {
+      state.timeRemaining = Math.max(0, Math.round((state.targetEndTime - Date.now()) / 1000));
+    }
+
+    // Update Play/Pause Button
+    dom.iconPlay.classList.remove('hidden');
+    dom.iconPause.classList.add('hidden');
+    dom.startPauseText.textContent = 'Resume';
+    dom.startPauseBtn.setAttribute('aria-label', 'Resume Timer');
+
+    updateDisplay();
+  }
+
+  function stopTimer() {
+    if (state.timerId) {
+      clearInterval(state.timerId);
+      state.timerId = null;
+    }
+    state.status = 'IDLE';
+    dom.iconPlay.classList.remove('hidden');
+    dom.iconPause.classList.add('hidden');
+    dom.startPauseText.textContent = 'Start';
+    dom.startPauseBtn.setAttribute('aria-label', 'Start Timer');
+    dom.circularWrapper.classList.remove('timer-completed');
+  }
+
+  function resetTimer() {
+    stopTimer();
+    const durationMinutes = settings[state.mode] || 25;
+    state.totalDuration = durationMinutes * 60;
+    state.timeRemaining = state.totalDuration;
+    updateDisplay();
+  }
+
+  function completeTimer() {
+    stopTimer();
+    state.timeRemaining = 0;
+    updateDisplay();
+
+    // Visual pulse effect
+    dom.circularWrapper.classList.add('timer-completed');
+    document.title = `⏰ Time's up! - FocusFlow`;
+
+    // 1. Play Audio Notification Sound via Web Audio API
+    synthesizer.play(settings.soundPreset, settings.volume);
+
+    // 2. Browser Desktop Notification (if enabled)
+    sendBrowserNotification();
+
+    // 3. Advance Session / Modes
+    if (state.mode === 'pomodoro') {
+      state.completedPomodoros++;
+      updateSessionTracker();
+
+      // Check if completed 4 pomodoros -> Long Break
+      if (state.completedPomodoros % 4 === 0) {
+        dom.timerStatus.textContent = 'Great work! Long break time.';
+        setTimeout(() => {
+          setMode('longBreak', settings.autoStartBreaks);
+        }, 1200);
+      } else {
+        dom.timerStatus.textContent = 'Pomodoro done! Take a breather.';
+        setTimeout(() => {
+          setMode('shortBreak', settings.autoStartBreaks);
+        }, 1200);
+      }
+    } else {
+      // Finished a break -> back to Pomodoro
+      dom.timerStatus.textContent = 'Break finished! Ready to focus?';
+      setTimeout(() => {
+        setMode('pomodoro', settings.autoStartPomodoros);
+      }, 1200);
+    }
+  }
+
+  function skipSession() {
+    dom.circularWrapper.classList.remove('timer-completed');
+    if (state.mode === 'pomodoro') {
+      state.completedPomodoros++;
+      updateSessionTracker();
+      if (state.completedPomodoros % 4 === 0) {
+        setMode('longBreak', false);
+      } else {
+        setMode('shortBreak', false);
+      }
+    } else {
+      setMode('pomodoro', false);
+    }
+  }
+
+  function updateSessionTracker() {
+    const currentCompleted = state.completedPomodoros % 4;
+    const currentCycle = Math.floor(state.completedPomodoros / 4) + 1;
+
+    dom.currentCycleNumber.textContent = currentCycle;
+    dom.cycleSummary.textContent = `${currentCompleted} of 4 Completed`;
+
+    dom.sessionDots.forEach(dot => {
+      const idx = parseInt(dot.dataset.index, 10);
+      dot.classList.toggle('completed', idx <= currentCompleted);
+    });
+  }
+
+  // --- Browser Desktop Notifications ---
+  function sendBrowserNotification() {
+    if (!settings.notifications || !('Notification' in window)) return;
+
+    if (Notification.permission === 'granted') {
+      const title = state.mode === 'pomodoro' ? 'Pomodoro Completed! 🍅' : 'Break Finished! ⚡';
+      const body = state.mode === 'pomodoro'
+        ? 'Time to step away and rest your mind.'
+        : 'Time to dive back into deep work!';
+      try {
+        new Notification(title, {
+          body,
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23f43f5e"><circle cx="12" cy="12" r="10"/></svg>'
+        });
+      } catch (err) {
+        console.warn('Notification failed:', err);
+      }
+    }
+  }
+
+  function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        settings.notifications = (permission === 'granted');
+        dom.toggleNotifications.checked = settings.notifications;
+        saveSettings();
+      });
+    }
+  }
+
+  // --- Audio Volume & Mute Controls ---
+  function updateVolumeUI() {
+    dom.volumeSlider.value = Math.round(settings.volume * 100);
+    dom.volumeValue.textContent = `${Math.round(settings.volume * 100)}%`;
+
+    const isMutedOrZero = settings.isMuted || settings.volume === 0;
+    dom.iconSoundOn.classList.toggle('hidden', isMutedOrZero);
+    dom.iconSoundOff.classList.toggle('hidden', !isMutedOrZero);
+    dom.muteBtn.setAttribute('title', isMutedOrZero ? 'Unmute (Key: M)' : 'Mute (Key: M)');
+  }
+
+  function toggleMute() {
+    synthesizer.init();
+    settings.isMuted = !settings.isMuted;
+    updateVolumeUI();
+    saveSettings();
+  }
+
+  function setVolume(newVal) {
+    synthesizer.init();
+    settings.volume = Math.max(0, Math.min(1, newVal / 100));
+    if (settings.volume > 0 && settings.isMuted) {
+      settings.isMuted = false;
+    }
+    updateVolumeUI();
+    saveSettings();
+  }
+
+  // --- Settings Modal ---
+  function openSettings() {
+    dom.inputPomodoro.value = settings.pomodoro;
+    dom.inputShortBreak.value = settings.shortBreak;
+    dom.inputLongBreak.value = settings.longBreak;
+    dom.toggleAutoBreak.checked = settings.autoStartBreaks;
+    dom.toggleAutoPomodoro.checked = settings.autoStartPomodoros;
+    dom.toggleNotifications.checked = settings.notifications;
+
+    dom.settingsModal.classList.remove('hidden');
+  }
+
+  function closeSettings() {
+    dom.settingsModal.classList.add('hidden');
+  }
+
+  function saveModalSettings() {
+    const pVal = parseInt(dom.inputPomodoro.value, 10);
+    const sbVal = parseInt(dom.inputShortBreak.value, 10);
+    const lbVal = parseInt(dom.inputLongBreak.value, 10);
+
+    if (pVal && pVal > 0) settings.pomodoro = pVal;
+    if (sbVal && sbVal > 0) settings.shortBreak = sbVal;
+    if (lbVal && lbVal > 0) settings.longBreak = lbVal;
+
+    settings.autoStartBreaks = dom.toggleAutoBreak.checked;
+    settings.autoStartPomodoros = dom.toggleAutoPomodoro.checked;
+    settings.notifications = dom.toggleNotifications.checked;
+
+    if (settings.notifications && 'Notification' in window && Notification.permission !== 'granted') {
+      requestNotificationPermission();
+    }
+
+    saveSettings();
+    closeSettings();
+
+    // If timer is currently idle, update current duration immediately
+    if (state.status === 'IDLE') {
+      resetTimer();
+    }
+  }
+
+  function restoreDefaultSettings() {
+    settings = Object.assign({}, DEFAULT_SETTINGS);
+    dom.inputPomodoro.value = settings.pomodoro;
+    dom.inputShortBreak.value = settings.shortBreak;
+    dom.inputLongBreak.value = settings.longBreak;
+    dom.toggleAutoBreak.checked = settings.autoStartBreaks;
+    dom.toggleAutoPomodoro.checked = settings.autoStartPomodoros;
+    dom.toggleNotifications.checked = settings.notifications;
+    settings.volume = 0.8;
+    settings.isMuted = false;
+    settings.soundPreset = 'zenChime';
+    dom.soundPresetSelect.value = settings.soundPreset;
+    updateVolumeUI();
+    saveSettings();
+    if (state.status === 'IDLE') {
+      resetTimer();
+    }
+  }
+
+  // --- Event Bindings ---
+  function setupEventListeners() {
+    // Start / Pause button
+    dom.startPauseBtn.addEventListener('click', () => {
+      if (state.status === 'RUNNING') {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    });
+
+    // Reset button
+    dom.resetBtn.addEventListener('click', resetTimer);
+
+    // Skip button
+    dom.skipBtn.addEventListener('click', skipSession);
+
+    // Mode tab buttons
+    dom.modeTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const mode = tab.dataset.mode;
+        if (mode && mode !== state.mode) {
+          setMode(mode, false);
+        }
+      });
+    });
+
+    // Sound Controls
+    dom.muteBtn.addEventListener('click', toggleMute);
+
+    dom.volumeSlider.addEventListener('input', (e) => {
+      setVolume(parseInt(e.target.value, 10));
+    });
+
+    dom.soundPresetSelect.addEventListener('change', (e) => {
+      settings.soundPreset = e.target.value;
+      saveSettings();
+    });
+
+    dom.btnTestSound.addEventListener('click', () => {
+      synthesizer.init();
+      synthesizer.play(settings.soundPreset, settings.volume);
+    });
+
+    // Settings Modal
+    dom.settingsBtn.addEventListener('click', openSettings);
+    dom.closeSettingsBtn.addEventListener('click', closeSettings);
+    dom.btnSaveSettings.addEventListener('click', saveModalSettings);
+    dom.btnRestoreDefaults.addEventListener('click', restoreDefaultSettings);
+
+    dom.settingsModal.addEventListener('click', (e) => {
+      if (e.target === dom.settingsModal) {
+        closeSettings();
+      }
+    });
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      // Don't trigger shortcuts if user is typing in an input
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        if (e.key === 'Escape') closeSettings();
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (state.status === 'RUNNING') {
+          pauseTimer();
+        } else {
+          startTimer();
+        }
+      } else if (e.key === 'r' || e.key === 'R') {
+        resetTimer();
+      } else if (e.key === 'm' || e.key === 'M') {
+        toggleMute();
+      } else if (e.key === 'Escape') {
+        closeSettings();
+      }
+    });
+  }
+
+  // --- Initialization ---
+  function init() {
+    // Restore preset selection
+    dom.soundPresetSelect.value = settings.soundPreset || 'zenChime';
+
+    // Set initial display
+    updateVolumeUI();
+    setMode('pomodoro', false);
+    updateSessionTracker();
+    setupEventListeners();
+  }
+
+  // Run on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+</script>
+</body>
+</html>
